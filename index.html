@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Kde počuješ A?</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Segoe UI", "Noto Sans", system-ui, -apple-system, sans-serif;
+    color: #1e3a5f;
+    background: linear-gradient(155deg, #e9f6ee 0%, #eef3fb 55%, #e6eff9 100%);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    overflow: hidden;
+  }
+  .app {
+    height: 100dvh;
+    padding: 1.4vh 2.2vw 1.8vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8vh;
+  }
+  header h1 {
+    margin: 0;
+    text-align: center;
+    font-size: 5.6vh;
+    letter-spacing: 0.02em;
+  }
+  header .hint {
+    margin: 0.4vh 0 0;
+    text-align: center;
+    font-size: 2.8vh;
+    color: #33506e;
+  }
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    width: min(66vw, 112vh);
+    margin: 0.6vh auto 0;
+    font-weight: 700;
+    font-size: 2.7vh;
+  }
+  .stage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  .img-panel {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: min(66vw, 112vh);
+    background: #ffffff;
+    border: 0.6vh solid #f5b940;
+    border-radius: 2.6vh;
+    box-shadow: 0 1vh 3vh rgba(30, 58, 95, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .img-panel .art {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .img-panel .art svg {
+    width: 100%;
+    height: 100%;
+  }
+  .smiley {
+    position: absolute;
+    top: 0.6vh;
+    right: 0.8vh;
+    width: 8vh;
+    height: 8vh;
+    pointer-events: none;
+    display: none;
+  }
+  .smiley svg { width: 100%; height: 100%; }
+  .word-area {
+    flex: 0 0 auto;
+    height: 14vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .word {
+    font-size: 8.5vh;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1;
+  }
+  .word .hl-wrong { color: #e53935; font-style: italic; }
+  .word .hl-ok { color: #2e9e4f; font-style: italic; }
+  .buttons {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    gap: 3vw;
+    height: 14.5vh;
+  }
+  .buttons button {
+    flex: 0 1 26vw;
+    max-width: 34vh;
+    font-family: inherit;
+    font-size: 4.6vh;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #1e3a5f;
+    background: #ffffff;
+    border: 0.55vh solid #1e3a5f;
+    border-radius: 2vh;
+    box-shadow: 0 0.9vh 0 #1e3a5f, 0 1.6vh 2vh rgba(30, 58, 95, 0.18);
+    cursor: pointer;
+    transition: transform 0.05s linear, box-shadow 0.05s linear;
+  }
+  .buttons button:active:not(:disabled) {
+    transform: translateY(0.6vh);
+    box-shadow: 0 0.3vh 0 #1e3a5f;
+  }
+  .buttons button:focus-visible { outline: 0.5vh solid #f5b940; outline-offset: 0.4vh; }
+  .buttons button:disabled { opacity: 0.55; cursor: default; }
+  @media (orientation: portrait) {
+    header h1 { font-size: 4.6vh; }
+    header .hint { font-size: 2.3vh; }
+    .word-area { height: 11vh; }
+    .word { font-size: 7vh; }
+    .buttons { height: 12vh; gap: 2vw; }
+    .buttons button { font-size: 3.6vh; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Kde počuješ A?</h1>
+    <p class="hint">Pozri sa na obrázok a vyber správne miesto.</p>
+  </header>
+  <div class="meta">
+    <span id="series">Séria 1</span>
+    <span id="counter">1 / 30</span>
+  </div>
+  <main class="stage">
+    <div class="img-panel">
+      <div class="art" id="art"></div>
+      <div class="smiley" id="smiley"></div>
+    </div>
+    <div class="word-area"><div class="word" id="word"></div></div>
+  </main>
+  <div class="buttons">
+    <button id="btn-start" type="button">ZAČIATOK</button>
+    <button id="btn-mid" type="button">STRED</button>
+    <button id="btn-end" type="button">KONIEC</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const SMILE_HAPPY =
+  '<svg viewBox="0 0 100 100">' +
+  '<circle cx="50" cy="50" r="46" fill="#ffd93d" stroke="#e0a800" stroke-width="4"/>' +
+  '<circle cx="34" cy="40" r="6" fill="#5d4037"/><circle cx="66" cy="40" r="6" fill="#5d4037"/>' +
+  '<path d="M28 60 Q50 80 72 60" fill="none" stroke="#5d4037" stroke-width="6" stroke-linecap="round"/>' +
+  '</svg>';
+
+const SMILE_SAD =
+  '<svg viewBox="0 0 100 100">' +
+  '<circle cx="50" cy="50" r="46" fill="#ffd93d" stroke="#e0a800" stroke-width="4"/>' +
+  '<circle cx="34" cy="42" r="6" fill="#5d4037"/><circle cx="66" cy="42" r="6" fill="#5d4037"/>' +
+  '<path d="M28 72 Q50 54 72 72" fill="none" stroke="#5d4037" stroke-width="6" stroke-linecap="round"/>' +
+  '</svg>';
+
+const ART = {
+  AUTO: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M22 128 Q22 106 46 103 L62 78 Q67 70 77 70 L123 70 Q133 70 138 78 L154 103 Q178 106 178 128 L178 140 Q178 148 170 148 L30 148 Q22 148 22 140 Z" fill="#e74c3c" stroke="#b03a2e" stroke-width="5"/>' +
+    '<path d="M70 82 L96 82 L96 102 L56 102 Z" fill="#aed6f1" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<path d="M106 82 L131 82 L144 102 L106 102 Z" fill="#aed6f1" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<circle cx="168" cy="120" r="6" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<circle cx="62" cy="148" r="21" fill="#2c3e50"/><circle cx="62" cy="148" r="9" fill="#ecf0f1"/>' +
+    '<circle cx="140" cy="148" r="21" fill="#2c3e50"/><circle cx="140" cy="148" r="9" fill="#ecf0f1"/>' +
+    '</g></svg>',
+  AUTOBUS: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="18" y="58" width="164" height="84" rx="14" fill="#f4b93e" stroke="#c98a1b" stroke-width="5"/>' +
+    '<rect x="30" y="70" width="26" height="26" rx="4" fill="#d6eaf8" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<rect x="62" y="70" width="26" height="26" rx="4" fill="#d6eaf8" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<rect x="94" y="70" width="26" height="26" rx="4" fill="#d6eaf8" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<rect x="126" y="70" width="24" height="26" rx="4" fill="#d6eaf8" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<rect x="156" y="70" width="18" height="62" rx="4" fill="#d6eaf8" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<rect x="24" y="112" width="126" height="9" rx="4.5" fill="#e67e22"/>' +
+    '<circle cx="32" cy="132" r="5" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<circle cx="58" cy="142" r="19" fill="#2c3e50"/><circle cx="58" cy="142" r="8" fill="#ecf0f1"/>' +
+    '<circle cx="142" cy="142" r="19" fill="#2c3e50"/><circle cx="142" cy="142" r="8" fill="#ecf0f1"/>' +
+    '</g></svg>',
+  ANJEL: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<ellipse cx="100" cy="26" rx="24" ry="7" fill="none" stroke="#f1c40f" stroke-width="6"/>' +
+    '<path d="M80 100 Q38 84 26 122 Q52 132 80 124 Z" fill="#ecf0f1" stroke="#b0bec5" stroke-width="4"/>' +
+    '<path d="M120 100 Q162 84 174 122 Q148 132 120 124 Z" fill="#ecf0f1" stroke="#b0bec5" stroke-width="4"/>' +
+    '<path d="M100 76 C82 88 74 128 70 166 Q100 178 130 166 C126 128 118 88 100 76 Z" fill="#fdfefe" stroke="#90a4ae" stroke-width="4"/>' +
+    '<ellipse cx="90" cy="171" rx="7" ry="4.5" fill="#fde3c8" stroke="#d9a066" stroke-width="2"/>' +
+    '<ellipse cx="110" cy="171" rx="7" ry="4.5" fill="#fde3c8" stroke="#d9a066" stroke-width="2"/>' +
+    '<circle cx="100" cy="56" r="20" fill="#fde3c8" stroke="#d9a066" stroke-width="3"/>' +
+    '<path d="M82 50 Q100 34 118 50 Q110 40 100 40 Q90 40 82 50 Z" fill="#8d6e63"/>' +
+    '<circle cx="93" cy="55" r="2.6" fill="#5d4037"/><circle cx="107" cy="55" r="2.6" fill="#5d4037"/>' +
+    '<path d="M93 63 Q100 69 107 63" fill="none" stroke="#5d4037" stroke-width="2.5"/>' +
+    '</g></svg>',
+  ANTÉNA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M28 172 L100 118 L172 172 Z" fill="#b0722f" stroke="#8a5522" stroke-width="4"/>' +
+    '<rect x="136" y="128" width="14" height="30" fill="#c0392b" stroke="#922b21" stroke-width="3"/>' +
+    '<rect x="96" y="34" width="8" height="88" rx="3" fill="#7f8c8d" stroke="#5d6d7e" stroke-width="3"/>' +
+    '<rect x="64" y="42" width="72" height="7" rx="3.5" fill="#5d6d7e"/>' +
+    '<rect x="72" y="60" width="56" height="7" rx="3.5" fill="#5d6d7e"/>' +
+    '<rect x="80" y="78" width="40" height="7" rx="3.5" fill="#5d6d7e"/>' +
+    '<circle cx="100" cy="28" r="8" fill="#e74c3c" stroke="#b03a2e" stroke-width="3"/>' +
+    '</g></svg>',
+  AGENT: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M58 172 L58 122 Q58 100 82 96 L118 96 Q142 100 142 122 L142 172 Z" fill="#2c3e50" stroke="#1b2631" stroke-width="4"/>' +
+    '<polygon points="90,96 110,96 100,124" fill="#ecf0f1"/>' +
+    '<polygon points="97,100 103,100 105,122 100,130 95,122" fill="#c0392b"/>' +
+    '<circle cx="100" cy="64" r="23" fill="#fde3c8" stroke="#d9a066" stroke-width="3"/>' +
+    '<rect x="79" y="58" width="18" height="13" rx="5" fill="#111111"/>' +
+    '<rect x="103" y="58" width="18" height="13" rx="5" fill="#111111"/>' +
+    '<line x1="97" y1="63" x2="103" y2="63" stroke="#111111" stroke-width="3"/>' +
+    '<ellipse cx="100" cy="46" rx="42" ry="10" fill="#2c3e50" stroke="#1b2631" stroke-width="3"/>' +
+    '<path d="M74 46 Q74 20 100 20 Q126 20 126 46 Z" fill="#2c3e50" stroke="#1b2631" stroke-width="3"/>' +
+    '<path d="M78 40 L122 40 L122 46 L78 46 Z" fill="#4a5b6b"/>' +
+    '</g></svg>',
+  AKVÁRIUM: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="24" y="52" width="152" height="110" rx="12" fill="#d6eaf8" stroke="#5dade2" stroke-width="6"/>' +
+    '<path d="M30 62 Q55 56 80 62 T130 62 T170 62" fill="none" stroke="#85c1e9" stroke-width="3"/>' +
+    '<path d="M30 138 Q70 128 100 138 T170 136 L170 152 Q170 156 164 156 L36 156 Q30 156 30 150 Z" fill="#f7dc6f"/>' +
+    '<path d="M52 152 Q44 130 54 106" fill="none" stroke="#27ae60" stroke-width="5"/>' +
+    '<path d="M62 152 Q68 132 60 116" fill="none" stroke="#2ecc71" stroke-width="5"/>' +
+    '<ellipse cx="84" cy="98" rx="20" ry="12" fill="#e67e22" stroke="#ba6b1a" stroke-width="3"/>' +
+    '<polygon points="102,98 120,86 120,110" fill="#e67e22" stroke="#ba6b1a" stroke-width="3"/>' +
+    '<circle cx="74" cy="95" r="3.4" fill="#2c3e50"/>' +
+    '<ellipse cx="132" cy="118" rx="14" ry="8.5" fill="#3498db" stroke="#2471a3" stroke-width="3"/>' +
+    '<polygon points="145,118 158,110 158,126" fill="#3498db" stroke="#2471a3" stroke-width="3"/>' +
+    '<circle cx="124" cy="116" r="2.6" fill="#2c3e50"/>' +
+    '<circle cx="160" cy="80" r="4" fill="none" stroke="#5dade2" stroke-width="2.5"/>' +
+    '<circle cx="168" cy="68" r="3" fill="none" stroke="#5dade2" stroke-width="2"/>' +
+    '</g></svg>',
+  ALIGÁTOR: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M156 92 Q190 86 186 112 Q190 134 154 126 Z" fill="#58d68d" stroke="#2ecc71" stroke-width="4"/>' +
+    '<rect x="84" y="126" width="11" height="20" rx="5" fill="#58d68d" stroke="#2ecc71" stroke-width="3"/>' +
+    '<rect x="126" y="126" width="11" height="20" rx="5" fill="#58d68d" stroke="#2ecc71" stroke-width="3"/>' +
+    '<path d="M18 112 Q18 102 28 102 L66 102 Q68 88 84 88 L148 88 Q160 88 160 102 L160 114 Q160 128 146 128 L64 128 Q50 128 46 124 L28 122 Q18 122 18 112 Z" fill="#58d68d" stroke="#2ecc71" stroke-width="4"/>' +
+    '<path d="M100 88 L106 80 L112 88 M120 88 L126 80 L132 88" fill="#58d68d" stroke="#2ecc71" stroke-width="3"/>' +
+    '<path d="M28 114 L33 121 L38 114 L43 121 L48 114 L53 121 L58 114 L63 121 L63 114 Z" fill="#ffffff" stroke="#2ecc71" stroke-width="2"/>' +
+    '<circle cx="88" cy="80" r="10" fill="#ffffff" stroke="#2ecc71" stroke-width="3"/>' +
+    '<circle cx="88" cy="80" r="4.5" fill="#2c3e50"/>' +
+    '<circle cx="26" cy="106" r="2.5" fill="#21618c"/>' +
+    '</g></svg>',
+  AVOKÁDO: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M100 26 C62 26 40 66 40 108 C40 150 66 176 100 176 C134 176 160 150 160 108 C160 66 138 26 100 26 Z" fill="#27ae60" stroke="#1e8449" stroke-width="5"/>' +
+    '<path d="M100 42 C72 42 55 76 55 108 C55 140 74 160 100 160 C126 160 145 140 145 108 C145 76 128 42 100 42 Z" fill="#eef6c0"/>' +
+    '<circle cx="100" cy="112" r="27" fill="#a04000" stroke="#7b3f00" stroke-width="4"/>' +
+    '<path d="M88 104 Q94 96 104 96" fill="none" stroke="#d35400" stroke-width="4"/>' +
+    '<path d="M100 26 Q112 12 126 16 Q118 28 100 26 Z" fill="#27ae60" stroke="#1e8449" stroke-width="3"/>' +
+    '</g></svg>',
+  ALBUM: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M16 54 Q60 36 100 48 Q140 36 184 54 L184 158 Q140 142 100 154 Q60 142 16 158 Z" fill="#c0392b" stroke="#922b21" stroke-width="4"/>' +
+    '<path d="M26 60 Q62 46 97 56 L97 148 Q62 138 26 150 Z" fill="#fdfefe" stroke="#d5dbdb" stroke-width="3"/>' +
+    '<path d="M174 60 Q138 46 103 56 L103 148 Q138 138 174 150 Z" fill="#fdfefe" stroke="#d5dbdb" stroke-width="3"/>' +
+    '<rect x="40" y="72" width="42" height="34" rx="3" fill="#f5b041" stroke="#d79a20" stroke-width="2"/>' +
+    '<circle cx="52" cy="82" r="6" fill="#f9e79f"/>' +
+    '<path d="M40 106 L54 94 L68 106 Z" fill="#82e0aa"/>' +
+    '<rect x="46" y="114" width="40" height="28" rx="3" fill="#aed6f1" stroke="#7fb3d5" stroke-width="2"/>' +
+    '<line x1="52" y1="134" x2="72" y2="116" stroke="#f1948a" stroke-width="4"/>' +
+    '<rect x="112" y="70" width="48" height="36" rx="3" fill="#82e0aa" stroke="#5cc98a" stroke-width="2"/>' +
+    '<rect x="126" y="86" width="18" height="14" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<polygon points="124,86 146,86 135,74" fill="#e74c3c"/>' +
+    '<rect x="116" y="114" width="42" height="30" rx="3" fill="#f1948a" stroke="#d9776f" stroke-width="2"/>' +
+    '<circle cx="137" cy="129" r="8" fill="#fdfefe"/>' +
+    '<circle cx="100" cy="62" r="3" fill="none" stroke="#922b21" stroke-width="2"/>' +
+    '<circle cx="100" cy="80" r="3" fill="none" stroke="#922b21" stroke-width="2"/>' +
+    '<circle cx="100" cy="98" r="3" fill="none" stroke="#922b21" stroke-width="2"/>' +
+    '<circle cx="100" cy="116" r="3" fill="none" stroke="#922b21" stroke-width="2"/>' +
+    '<circle cx="100" cy="134" r="3" fill="none" stroke="#922b21" stroke-width="2"/>' +
+    '</g></svg>',
+  AKORDEÓN: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M30 70 Q22 46 40 38" fill="none" stroke="#6e2c00" stroke-width="6"/>' +
+    '<path d="M158 62 Q168 36 150 28" fill="none" stroke="#6e2c00" stroke-width="6"/>' +
+    '<polygon points="64,76 118,66 118,146 64,138" fill="#e67e22" stroke="#ba4a00" stroke-width="3"/>' +
+    '<line x1="74" y1="74" x2="74" y2="139.5" stroke="#ba4a00" stroke-width="2.5"/>' +
+    '<line x1="84" y1="72" x2="84" y2="141" stroke="#ba4a00" stroke-width="2.5"/>' +
+    '<line x1="94" y1="70.2" x2="94" y2="142.5" stroke="#ba4a00" stroke-width="2.5"/>' +
+    '<line x1="104" y1="68.3" x2="104" y2="144" stroke="#ba4a00" stroke-width="2.5"/>' +
+    '<line x1="112" y1="66.9" x2="112" y2="145.2" stroke="#ba4a00" stroke-width="2.5"/>' +
+    '<rect x="18" y="70" width="46" height="72" rx="7" fill="#c0392b" stroke="#922b21" stroke-width="4"/>' +
+    '<circle cx="33" cy="86" r="4" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<circle cx="45" cy="86" r="4" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<circle cx="33" cy="104" r="4" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<circle cx="45" cy="104" r="4" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<circle cx="33" cy="122" r="4" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<circle cx="45" cy="122" r="4" fill="#f9e79f" stroke="#d4ac0d" stroke-width="2"/>' +
+    '<rect x="118" y="62" width="50" height="88" rx="7" fill="#1e8449" stroke="#145a32" stroke-width="4"/>' +
+    '<rect x="126" y="70" width="15" height="74" rx="2" fill="#fdfefe" stroke="#333333" stroke-width="2"/>' +
+    '<rect x="126" y="70" width="9" height="26" fill="#222222"/>' +
+    '<rect x="126" y="100" width="9" height="26" fill="#222222"/>' +
+    '<rect x="126" y="130" width="9" height="14" fill="#222222"/>' +
+    '</g></svg>',
+  VLAK: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="46" cy="42" r="9" fill="#d5dbdb"/>' +
+    '<circle cx="62" cy="30" r="12" fill="#d5dbdb"/>' +
+    '<circle cx="82" cy="22" r="15" fill="#ecf0f1"/>' +
+    '<rect x="8" y="158" width="184" height="6" rx="3" fill="#95a5a6"/>' +
+    '<rect x="38" y="52" width="16" height="30" rx="3" fill="#2c3e50"/>' +
+    '<rect x="20" y="78" width="60" height="50" rx="10" fill="#e74c3c" stroke="#b03a2e" stroke-width="4"/>' +
+    '<rect x="80" y="58" width="44" height="70" rx="8" fill="#c0392b" stroke="#922b21" stroke-width="4"/>' +
+    '<rect x="89" y="68" width="26" height="24" rx="4" fill="#d6eaf8" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<rect x="122" y="114" width="16" height="7" fill="#566573"/>' +
+    '<rect x="136" y="72" width="52" height="54" rx="7" fill="#3498db" stroke="#2471a3" stroke-width="4"/>' +
+    '<rect x="143" y="82" width="16" height="18" rx="3" fill="#d6eaf8"/>' +
+    '<rect x="165" y="82" width="16" height="18" rx="3" fill="#d6eaf8"/>' +
+    '<circle cx="42" cy="130" r="17" fill="#2c3e50"/><circle cx="42" cy="130" r="7" fill="#ecf0f1"/>' +
+    '<circle cx="100" cy="130" r="17" fill="#2c3e50"/><circle cx="100" cy="130" r="7" fill="#ecf0f1"/>' +
+    '<circle cx="150" cy="132" r="13" fill="#2c3e50"/><circle cx="150" cy="132" r="5.5" fill="#ecf0f1"/>' +
+    '<circle cx="176" cy="132" r="13" fill="#2c3e50"/><circle cx="176" cy="132" r="5.5" fill="#ecf0f1"/>' +
+    '</g></svg>',
+  HAD: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M24 142 Q46 104 74 128 Q104 154 128 122 Q142 102 162 106" fill="none" stroke="#58d68d" stroke-width="17"/>' +
+    '<ellipse cx="168" cy="102" rx="16" ry="12.5" fill="#58d68d" stroke="#2ecc71" stroke-width="3"/>' +
+    '<circle cx="166" cy="96" r="3" fill="#2c3e50"/><circle cx="174" cy="96" r="3" fill="#2c3e50"/>' +
+    '<path d="M183 104 Q192 107 197 102 M197 102 L202 97 M197 102 L203 104" fill="none" stroke="#e74c3c" stroke-width="2.5"/>' +
+    '<path d="M28 166 Q33 152 38 166 M44 166 Q50 148 56 166" fill="none" stroke="#27ae60" stroke-width="3"/>' +
+    '</g></svg>',
+  RAK: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M86 96 Q56 66 34 60" fill="none" stroke="#b03a2e" stroke-width="3"/>' +
+    '<path d="M84 106 Q48 92 24 96" fill="none" stroke="#b03a2e" stroke-width="3"/>' +
+    '<line x1="94" y1="94" x2="90" y2="78" stroke="#b03a2e" stroke-width="3"/>' +
+    '<line x1="112" y1="94" x2="116" y2="78" stroke="#b03a2e" stroke-width="3"/>' +
+    '<circle cx="90" cy="75" r="5" fill="#2c3e50"/><circle cx="116" cy="75" r="5" fill="#2c3e50"/>' +
+    '<path d="M74 104 Q56 96 50 88" fill="none" stroke="#e74c3c" stroke-width="9"/>' +
+    '<path d="M74 124 Q56 132 50 140" fill="none" stroke="#e74c3c" stroke-width="9"/>' +
+    '<path d="M140 100 L172 88 Q178 115 172 142 L140 128 Z" fill="#cb4335" stroke="#94331f" stroke-width="4"/>' +
+    '<ellipse cx="106" cy="114" rx="40" ry="24" fill="#e74c3c" stroke="#b03a2e" stroke-width="4"/>' +
+    '<path d="M124 94 Q128 114 124 134 M138 100 Q142 114 138 128" fill="none" stroke="#b03a2e" stroke-width="3"/>' +
+    '<path d="M96 136 Q92 150 82 154 M116 136 Q118 150 128 154" fill="none" stroke="#b03a2e" stroke-width="4"/>' +
+    '<path d="M52 82 L38 70 A13.5 13.5 0 1 0 38 94 Z" fill="#e67e22" stroke="#ba6b1a" stroke-width="3"/>' +
+    '<path d="M52 140 L38 128 A13.5 13.5 0 1 1 38 152 Z" fill="#e67e22" stroke="#ba6b1a" stroke-width="3"/>' +
+    '</g></svg>',
+  MAK: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M100 176 Q94 136 100 100" fill="none" stroke="#27ae60" stroke-width="6"/>' +
+    '<path d="M100 148 Q72 142 64 154 Q84 160 100 154 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="3"/>' +
+    '<path d="M100 134 Q128 128 136 140 Q116 146 100 140 Z" fill="#2ecc71" stroke="#27ae60" stroke-width="3"/>' +
+    '<ellipse cx="100" cy="46" rx="15" ry="20" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>' +
+    '<ellipse cx="100" cy="98" rx="15" ry="20" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>' +
+    '<ellipse cx="74" cy="72" rx="20" ry="15" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>' +
+    '<ellipse cx="126" cy="72" rx="20" ry="15" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>' +
+    '<ellipse cx="83" cy="55" rx="14" ry="10" transform="rotate(-45 83 55)" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>' +
+    '<ellipse cx="117" cy="55" rx="14" ry="10" transform="rotate(45 117 55)" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>' +
+    '<ellipse cx="83" cy="89" rx="14" ry="10" transform="rotate(45 83 89)" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>' +
+    '<ellipse cx="117" cy="89" rx="14" ry="10" transform="rotate(-45 117 89)" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>' +
+    '<circle cx="100" cy="72" r="14" fill="#34495e" stroke="#2c3e50" stroke-width="3"/>' +
+    '<circle cx="95" cy="68" r="1.8" fill="#85929e"/><circle cx="105" cy="68" r="1.8" fill="#85929e"/>' +
+    '<circle cx="100" cy="77" r="1.8" fill="#85929e"/><circle cx="93" cy="76" r="1.8" fill="#85929e"/>' +
+    '<circle cx="107" cy="76" r="1.8" fill="#85929e"/>' +
+    '</g></svg>',
+  DAR: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="42" y="98" width="116" height="72" rx="8" fill="#e74c3c" stroke="#b03a2e" stroke-width="4"/>' +
+    '<circle cx="64" cy="120" r="4" fill="#f9c9c3"/><circle cx="76" cy="146" r="4" fill="#f9c9c3"/>' +
+    '<circle cx="124" cy="118" r="4" fill="#f9c9c3"/><circle cx="136" cy="146" r="4" fill="#f9c9c3"/>' +
+    '<rect x="92" y="98" width="16" height="72" fill="#f7dc6f" stroke="#d4ac0d" stroke-width="3"/>' +
+    '<rect x="34" y="80" width="132" height="26" rx="8" fill="#ec7063" stroke="#b03a2e" stroke-width="4"/>' +
+    '<rect x="92" y="80" width="16" height="26" fill="#f7dc6f" stroke="#d4ac0d" stroke-width="3"/>' +
+    '<path d="M100 78 Q66 56 60 74 Q56 86 92 80 Z" fill="#f7dc6f" stroke="#d4ac0d" stroke-width="3"/>' +
+    '<path d="M100 78 Q134 56 140 74 Q144 86 108 80 Z" fill="#f7dc6f" stroke="#d4ac0d" stroke-width="3"/>' +
+    '<circle cx="100" cy="78" r="8" fill="#f4d03f" stroke="#d4ac0d" stroke-width="3"/>' +
+    '</g></svg>',
+  HRAD: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<line x1="37" y1="52" x2="37" y2="30" stroke="#7f8c8d" stroke-width="3"/>' +
+    '<polygon points="37,30 57,35 37,42" fill="#f1c40f"/>' +
+    '<line x1="163" y1="52" x2="163" y2="30" stroke="#7f8c8d" stroke-width="3"/>' +
+    '<polygon points="163,30 183,35 163,42" fill="#f1c40f"/>' +
+    '<rect x="22" y="82" width="30" height="88" fill="#b8bfc2" stroke="#99a3a4" stroke-width="4"/>' +
+    '<rect x="148" y="82" width="30" height="88" fill="#b8bfc2" stroke="#99a3a4" stroke-width="4"/>' +
+    '<polygon points="22,82 52,82 37,50" fill="#c0392b" stroke="#922b21" stroke-width="4"/>' +
+    '<polygon points="148,82 178,82 163,50" fill="#c0392b" stroke="#922b21" stroke-width="4"/>' +
+    '<rect x="40" y="106" width="120" height="64" fill="#ccd3d6" stroke="#99a3a4" stroke-width="4"/>' +
+    '<rect x="40" y="94" width="16" height="14" fill="#ccd3d6" stroke="#99a3a4" stroke-width="3"/>' +
+    '<rect x="64" y="94" width="16" height="14" fill="#ccd3d6" stroke="#99a3a4" stroke-width="3"/>' +
+    '<rect x="88" y="94" width="16" height="14" fill="#ccd3d6" stroke="#99a3a4" stroke-width="3"/>' +
+    '<rect x="112" y="94" width="16" height="14" fill="#ccd3d6" stroke="#99a3a4" stroke-width="3"/>' +
+    '<rect x="136" y="94" width="16" height="14" fill="#ccd3d6" stroke="#99a3a4" stroke-width="3"/>' +
+    '<rect x="33" y="106" width="8" height="16" rx="4" fill="#6e2c00"/>' +
+    '<rect x="159" y="106" width="8" height="16" rx="4" fill="#6e2c00"/>' +
+    '<path d="M84 170 L84 140 Q100 124 116 140 L116 170 Z" fill="#6e2c00" stroke="#5b2417" stroke-width="4"/>' +
+    '</g></svg>',
+  MRAK: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M52 132 C34 132 28 114 40 104 C36 88 52 76 66 82 C72 64 98 60 108 76 C120 62 144 68 146 86 C162 82 174 96 168 110 C178 116 174 132 160 132 Z" fill="#d6e6f7" stroke="#7fb3d5" stroke-width="5"/>' +
+    '</g></svg>',
+  PARK: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<ellipse cx="100" cy="160" rx="86" ry="13" fill="#a9dfbf" stroke="#7dcea0" stroke-width="3"/>' +
+    '<rect x="50" y="112" width="11" height="42" rx="4" fill="#8d6e63" stroke="#6d4c41" stroke-width="3"/>' +
+    '<circle cx="56" cy="92" r="30" fill="#58d68d" stroke="#2ecc71" stroke-width="4"/>' +
+    '<circle cx="46" cy="84" r="3" fill="#f4d03f"/><circle cx="64" cy="98" r="3" fill="#f4d03f"/><circle cx="58" cy="74" r="3" fill="#f4d03f"/>' +
+    '<rect x="142" y="118" width="10" height="36" rx="4" fill="#8d6e63" stroke="#6d4c41" stroke-width="3"/>' +
+    '<circle cx="155" cy="98" r="24" fill="#58d68d" stroke="#2ecc71" stroke-width="4"/>' +
+    '<rect x="80" y="112" width="50" height="7" rx="3" fill="#a04000" stroke="#7b3d00" stroke-width="2.5"/>' +
+    '<rect x="84" y="128" width="44" height="9" rx="3" fill="#a04000" stroke="#7b3d00" stroke-width="2.5"/>' +
+    '<rect x="88" y="112" width="5" height="18" fill="#a04000"/>' +
+    '<rect x="119" y="112" width="5" height="18" fill="#a04000"/>' +
+    '<rect x="88" y="137" width="6" height="16" fill="#7b3d00"/>' +
+    '<rect x="118" y="137" width="6" height="16" fill="#7b3d00"/>' +
+    '</g></svg>',
+  TANK: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<line x1="80" y1="76" x2="72" y2="56" stroke="#34495e" stroke-width="3"/>' +
+    '<rect x="128" y="82" width="56" height="9" rx="4.5" fill="#566573" stroke="#34495e" stroke-width="3"/>' +
+    '<rect x="178" y="79" width="8" height="15" rx="3" fill="#34495e"/>' +
+    '<path d="M72 100 Q72 72 104 72 Q136 72 136 100 Z" fill="#7d9440" stroke="#5c6e2e" stroke-width="4"/>' +
+    '<ellipse cx="104" cy="73" rx="12" ry="4.5" fill="#5c6e2e"/>' +
+    '<rect x="30" y="118" width="140" height="32" rx="16" fill="#5d6d7e" stroke="#34495e" stroke-width="4"/>' +
+    '<circle cx="52" cy="134" r="9" fill="#aab7b8" stroke="#34495e" stroke-width="3"/>' +
+    '<circle cx="76" cy="134" r="9" fill="#aab7b8" stroke="#34495e" stroke-width="3"/>' +
+    '<circle cx="100" cy="134" r="9" fill="#aab7b8" stroke="#34495e" stroke-width="3"/>' +
+    '<circle cx="124" cy="134" r="9" fill="#aab7b8" stroke="#34495e" stroke-width="3"/>' +
+    '<circle cx="148" cy="134" r="9" fill="#aab7b8" stroke="#34495e" stroke-width="3"/>' +
+    '<path d="M38 122 L162 122 L172 106 Q174 100 166 100 L34 100 Q26 100 30 110 Z" fill="#8aa04a" stroke="#5c6e2e" stroke-width="4"/>' +
+    '</g></svg>',
+  TRAKTOR: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="108" cy="50" r="7" fill="#d5dbdb"/>' +
+    '<rect x="104" y="58" width="9" height="30" rx="3" fill="#566573" stroke="#34495e" stroke-width="3"/>' +
+    '<path d="M96 132 L96 92 Q96 84 104 84 L156 84 Q164 84 164 96 L164 132 Z" fill="#e74c3c" stroke="#b03a2e" stroke-width="4"/>' +
+    '<rect x="48" y="62" width="44" height="70" fill="#f5b7b1" stroke="#b03a2e" stroke-width="4"/>' +
+    '<rect x="42" y="54" width="56" height="12" rx="5" fill="#c0392b" stroke="#922b21" stroke-width="3"/>' +
+    '<rect x="55" y="70" width="30" height="42" fill="#aed6f1" stroke="#7fb3d5" stroke-width="3"/>' +
+    '<path d="M30 128 A36 36 0 0 1 102 128" fill="none" stroke="#b03a2e" stroke-width="9"/>' +
+    '<circle cx="66" cy="130" r="36" fill="#2c3e50" stroke="#17202a" stroke-width="4"/>' +
+    '<circle cx="66" cy="130" r="17" fill="#d5dbdb" stroke="#aab7b8" stroke-width="3"/>' +
+    '<circle cx="66" cy="130" r="5" fill="#7f8c8d"/>' +
+    '<line x1="66" y1="113" x2="66" y2="103" stroke="#4a5b6b" stroke-width="4"/>' +
+    '<line x1="80.7" y1="121.5" x2="89.4" y2="116.5" stroke="#4a5b6b" stroke-width="4"/>' +
+    '<line x1="51.3" y1="121.5" x2="42.6" y2="116.5" stroke="#4a5b6b" stroke-width="4"/>' +
+    '<line x1="51.3" y1="138.5" x2="42.6" y2="143.5" stroke="#4a5b6b" stroke-width="4"/>' +
+    '<line x1="66" y1="147" x2="66" y2="157" stroke="#4a5b6b" stroke-width="4"/>' +
+    '<line x1="80.7" y1="138.5" x2="89.4" y2="143.5" stroke="#4a5b6b" stroke-width="4"/>' +
+    '<circle cx="140" cy="140" r="21" fill="#2c3e50" stroke="#17202a" stroke-width="4"/>' +
+    '<circle cx="140" cy="140" r="9" fill="#d5dbdb" stroke="#aab7b8" stroke-width="3"/>' +
+    '</g></svg>',
+  SOVA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M50 168 Q100 176 150 168" fill="none" stroke="#8d6e63" stroke-width="7"/>' +
+    '<polygon points="62,74 76,48 88,72" fill="#c3834a" stroke="#8d5a2b" stroke-width="3"/>' +
+    '<polygon points="138,74 124,48 112,72" fill="#c3834a" stroke="#8d5a2b" stroke-width="3"/>' +
+    '<ellipse cx="100" cy="108" rx="44" ry="52" fill="#c3834a" stroke="#8d5a2b" stroke-width="4"/>' +
+    '<ellipse cx="62" cy="118" rx="12" ry="26" transform="rotate(12 62 118)" fill="#9a5b28" stroke="#8d5a2b" stroke-width="3"/>' +
+    '<ellipse cx="138" cy="118" rx="12" ry="26" transform="rotate(-12 138 118)" fill="#9a5b28" stroke="#8d5a2b" stroke-width="3"/>' +
+    '<ellipse cx="100" cy="136" rx="26" ry="22" fill="#e8d0a8"/>' +
+    '<path d="M92 128 L100 134 L108 128 M90 138 L100 144 L110 138 M92 148 L100 154 L108 148" fill="none" stroke="#c8a06a" stroke-width="2.5"/>' +
+    '<circle cx="83" cy="86" r="19" fill="#f6e3c5" stroke="#8d5a2b" stroke-width="3"/>' +
+    '<circle cx="117" cy="86" r="19" fill="#f6e3c5" stroke="#8d5a2b" stroke-width="3"/>' +
+    '<circle cx="83" cy="86" r="8" fill="#2c3e50"/><circle cx="117" cy="86" r="8" fill="#2c3e50"/>' +
+    '<circle cx="86" cy="83" r="2.5" fill="#ffffff"/><circle cx="120" cy="83" r="2.5" fill="#ffffff"/>' +
+    '<polygon points="100,94 92,104 108,104" fill="#f39c12" stroke="#d68910" stroke-width="2.5"/>' +
+    '<path d="M86 160 L86 167 M114 160 L114 167" stroke="#f39c12" stroke-width="4"/>' +
+    '</g></svg>',
+  RYBA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M128 104 L166 78 Q174 104 166 130 Z" fill="#2e86c1" stroke="#21618c" stroke-width="4"/>' +
+    '<path d="M78 76 L90 52 L104 76 Z" fill="#2e86c1" stroke="#21618c" stroke-width="3"/>' +
+    '<ellipse cx="88" cy="104" rx="46" ry="30" fill="#3498db" stroke="#21618c" stroke-width="4"/>' +
+    '<path d="M86 112 Q102 118 100 132 Q86 128 82 118 Z" fill="#2e86c1" stroke="#21618c" stroke-width="3"/>' +
+    '<path d="M96 92 Q104 98 96 104 M112 92 Q120 98 112 104 M96 108 Q104 114 96 120 M112 108 Q120 114 112 120" fill="none" stroke="#a9cce3" stroke-width="3"/>' +
+    '<circle cx="62" cy="96" r="7" fill="#ffffff" stroke="#21618c" stroke-width="2.5"/>' +
+    '<circle cx="62" cy="96" r="3.2" fill="#2c3e50"/>' +
+    '<path d="M44 110 Q48 114 54 112" fill="none" stroke="#21618c" stroke-width="3"/>' +
+    '<circle cx="158" cy="56" r="5" fill="none" stroke="#85c1e9" stroke-width="2.5"/>' +
+    '<circle cx="170" cy="42" r="3.5" fill="none" stroke="#85c1e9" stroke-width="2.5"/>' +
+    '</g></svg>',
+  KNIHA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M20 52 Q60 36 100 48 Q140 36 180 52 L180 156 Q140 142 100 154 Q60 142 20 156 Z" fill="#c0392b" stroke="#922b21" stroke-width="4"/>' +
+    '<path d="M30 58 Q64 46 96 55 L96 146 Q64 138 30 148 Z" fill="#fdfefe" stroke="#d5dbdb" stroke-width="3"/>' +
+    '<path d="M170 58 Q136 46 104 55 L104 146 Q136 138 170 148 Z" fill="#fdfefe" stroke="#d5dbdb" stroke-width="3"/>' +
+    '<path d="M42 76 Q66 68 88 74 M42 92 Q66 84 88 90 M42 108 Q66 100 88 106 M42 124 Q66 116 88 122" fill="none" stroke="#aed6f1" stroke-width="3.5"/>' +
+    '<path d="M158 76 Q134 68 112 74 M158 92 Q134 84 112 90 M158 108 Q134 100 112 106 M158 124 Q134 116 112 122" fill="none" stroke="#aed6f1" stroke-width="3.5"/>' +
+    '<polygon points="97,150 103,150 100,168" fill="#e74c3c"/>' +
+    '</g></svg>',
+  NOHA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M72 22 L118 22 L116 48 L98 52 L78 48 Z" fill="#5dade2" stroke="#2e86c1" stroke-width="3.5"/>' +
+    '<path d="M80 46 L112 46 C112 78 112 104 110 122 L142 136 Q154 141 152 149 Q150 158 138 156 L100 150 C88 148 82 138 81 124 C79 96 79 70 80 46 Z" fill="#fde3c8" stroke="#d9a066" stroke-width="3.5"/>' +
+    '<path d="M82 84 Q94 89 110 84" fill="none" stroke="#e8c39e" stroke-width="2.5"/>' +
+    '<circle cx="146" cy="144" r="2" fill="#d9a066"/>' +
+    '<circle cx="150" cy="149" r="2" fill="#d9a066"/>' +
+    '</g></svg>',
+  RUKA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M64 118 Q44 114 40 128 Q37 141 56 143 L64 143 Z" fill="#fde3c8" stroke="#d9a066" stroke-width="3.5"/>' +
+    '<path d="M64 148 L64 100 Q64 90 71 90 Q78 90 78 100 L78 64 Q78 54 86 54 Q94 54 94 64 L94 52 Q94 42 102 42 Q110 42 110 52 L110 62 Q110 54 118 54 Q126 54 126 62 L126 74 Q126 66 132 66 Q139 66 139 74 L139 116 Q139 134 124 142 L124 148 Z" fill="#fde3c8" stroke="#d9a066" stroke-width="3.5"/>' +
+    '<rect x="58" y="142" width="70" height="26" rx="9" fill="#5dade2" stroke="#2e86c1" stroke-width="3.5"/>' +
+    '</g></svg>',
+  MUCHA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<ellipse cx="118" cy="80" rx="27" ry="11" transform="rotate(-28 118 80)" fill="#d6eaf8" opacity="0.9" stroke="#85c1e9" stroke-width="2.5"/>' +
+    '<ellipse cx="128" cy="94" rx="24" ry="10" transform="rotate(-6 128 94)" fill="#d6eaf8" opacity="0.9" stroke="#85c1e9" stroke-width="2.5"/>' +
+    '<path d="M78 118 L60 126 M84 128 L70 146 M100 136 L98 156 M114 132 L124 150 M120 122 L138 130 M118 112 L136 114" fill="none" stroke="#42494f" stroke-width="3.5"/>' +
+    '<ellipse cx="102" cy="114" rx="32" ry="24" fill="#7f8c8d" stroke="#566573" stroke-width="4"/>' +
+    '<path d="M112 94 Q118 114 112 134 M126 100 Q132 114 126 128" fill="none" stroke="#566573" stroke-width="3.5"/>' +
+    '<circle cx="72" cy="102" r="15" fill="#7f8c8d" stroke="#566573" stroke-width="4"/>' +
+    '<circle cx="64" cy="96" r="6" fill="#e74c3c" stroke="#b03a2e" stroke-width="2"/>' +
+    '<circle cx="74" cy="92" r="6" fill="#e74c3c" stroke="#b03a2e" stroke-width="2"/>' +
+    '<path d="M62 90 Q54 80 46 78 M68 88 Q64 76 58 70" fill="none" stroke="#566573" stroke-width="2.5"/>' +
+    '</g></svg>',
+  GUMA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<polygon points="46,84 116,84 152,106 82,106" fill="#fadbd8" stroke="#b5544c" stroke-width="3.5"/>' +
+    '<polygon points="46,84 82,106 82,150 46,128" fill="#ec7063" stroke="#b5544c" stroke-width="3.5"/>' +
+    '<polygon points="82,106 152,106 152,148 82,150" fill="#f5b7b1" stroke="#b5544c" stroke-width="3.5"/>' +
+    '<polygon points="106,106 128,106 128,147 106,148.7" fill="#5dade2" stroke="#2e86c1" stroke-width="2.5"/>' +
+    '<path d="M160 156 Q166 152 172 155" fill="none" stroke="#ec7063" stroke-width="3"/>' +
+    '</g></svg>',
+  LUPA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<line x1="116" y1="116" x2="156" y2="156" stroke="#8d6e63" stroke-width="17"/>' +
+    '<line x1="108" y1="108" x2="120" y2="120" stroke="#566573" stroke-width="23"/>' +
+    '<circle cx="82" cy="82" r="44" fill="#d6eaf8" fill-opacity="0.85" stroke="#566573" stroke-width="9"/>' +
+    '<path d="M78 92 Q92 84 100 94 Q88 102 78 92 Z" fill="#82e0aa"/>' +
+    '<path d="M62 62 Q72 52 86 50" fill="none" stroke="#ffffff" stroke-width="6"/>' +
+    '</g></svg>',
+  ZIMA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="0" y="0" width="200" height="200" fill="#d6eaf8"/>' +
+    '<circle cx="30" cy="40" r="4" fill="#ffffff" stroke="#aed6f1" stroke-width="1.5"/>' +
+    '<circle cx="60" cy="26" r="3" fill="#ffffff" stroke="#aed6f1" stroke-width="1.5"/>' +
+    '<circle cx="150" cy="34" r="4" fill="#ffffff" stroke="#aed6f1" stroke-width="1.5"/>' +
+    '<circle cx="176" cy="60" r="3" fill="#ffffff" stroke="#aed6f1" stroke-width="1.5"/>' +
+    '<circle cx="24" cy="84" r="3" fill="#ffffff" stroke="#aed6f1" stroke-width="1.5"/>' +
+    '<circle cx="170" cy="96" r="3" fill="#ffffff" stroke="#aed6f1" stroke-width="1.5"/>' +
+    '<path d="M0 152 Q50 142 100 152 T200 150 L200 200 L0 200 Z" fill="#fdfefe"/>' +
+    '<polygon points="34,150 52,150 43,116" fill="#27ae60" stroke="#1e8449" stroke-width="3"/>' +
+    '<polygon points="37,134 49,134 43,118" fill="#fdfefe"/>' +
+    '<rect x="41" y="148" width="5" height="8" fill="#6d4c41"/>' +
+    '<path d="M88 126 L64 110 M136 126 L160 112" fill="none" stroke="#8d6e63" stroke-width="4.5"/>' +
+    '<circle cx="112" cy="136" r="24" fill="#fdfefe" stroke="#b8d4e0" stroke-width="3"/>' +
+    '<circle cx="112" cy="102" r="17" fill="#fdfefe" stroke="#b8d4e0" stroke-width="3"/>' +
+    '<circle cx="106" cy="98" r="2" fill="#2c3e50"/><circle cx="118" cy="98" r="2" fill="#2c3e50"/>' +
+    '<polygon points="112,102 128,105 112,108" fill="#e67e22"/>' +
+    '<circle cx="106" cy="109" r="1.5" fill="#2c3e50"/><circle cx="112" cy="111" r="1.5" fill="#2c3e50"/><circle cx="118" cy="109" r="1.5" fill="#2c3e50"/>' +
+    '<circle cx="112" cy="128" r="2.2" fill="#2c3e50"/><circle cx="112" cy="137" r="2.2" fill="#2c3e50"/><circle cx="112" cy="146" r="2.2" fill="#2c3e50"/>' +
+    '<path d="M98 114 Q112 122 126 114 L126 121 Q112 129 98 121 Z" fill="#e74c3c" stroke="#b03a2e" stroke-width="2.5"/>' +
+    '<rect x="120" y="118" width="9" height="20" rx="4" fill="#e74c3c" stroke="#b03a2e" stroke-width="2.5"/>' +
+    '<polygon points="100,90 124,90 118,72 106,72" fill="#2c3e50" stroke="#17202a" stroke-width="2.5"/>' +
+    '<rect x="96" y="88" width="32" height="6" rx="3" fill="#17202a"/>' +
+    '</g></svg>',
+  KOZA: '<svg viewBox="0 0 200 200"><g stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M70 168 Q74 156 78 168 M84 168 Q88 154 92 168 M148 170 Q152 158 156 170" fill="none" stroke="#27ae60" stroke-width="3"/>' +
+    '<rect x="76" y="134" width="10" height="30" rx="4" fill="#f8f9f9" stroke="#aab7b8" stroke-width="3.5"/>' +
+    '<rect x="96" y="136" width="10" height="28" rx="4" fill="#f8f9f9" stroke="#aab7b8" stroke-width="3.5"/>' +
+    '<rect x="122" y="136" width="10" height="28" rx="4" fill="#f8f9f9" stroke="#aab7b8" stroke-width="3.5"/>' +
+    '<rect x="138" y="134" width="10" height="30" rx="4" fill="#f8f9f9" stroke="#aab7b8" stroke-width="3.5"/>' +
+    '<rect x="76" y="162" width="10" height="7" rx="2" fill="#7f8c8d"/>' +
+    '<rect x="96" y="162" width="10" height="7" rx="2" fill="#7f8c8d"/>' +
+    '<rect x="122" y="162" width="10" height="7" rx="2" fill="#7f8c8d"/>' +
+    '<rect x="138" y="162" width="10" height="7" rx="2" fill="#7f8c8d"/>' +
+    '<ellipse cx="108" cy="112" rx="46" ry="28" fill="#f8f9f9" stroke="#aab7b8" stroke-width="4"/>' +
+    '<path d="M150 98 Q162 88 164 98 Q158 102 152 104 Z" fill="#f8f9f9" stroke="#aab7b8" stroke-width="3"/>' +
+    '<path d="M50 68 Q52 46 66 44" fill="none" stroke="#8d6e63" stroke-width="5"/>' +
+    '<path d="M60 68 Q66 50 78 50" fill="none" stroke="#8d6e63" stroke-width="5"/>' +
+    '<ellipse cx="68" cy="86" rx="11" ry="5" transform="rotate(-20 68 86)" fill="#d5dbdb" stroke="#aab7b8" stroke-width="3"/>' +
+    '<circle cx="54" cy="86" r="20" fill="#f8f9f9" stroke="#aab7b8" stroke-width="4"/>' +
+    '<ellipse cx="42" cy="94" rx="12" ry="9" fill="#f0f3f4" stroke="#aab7b8" stroke-width="3"/>' +
+    '<circle cx="36" cy="94" r="1.8" fill="#566573"/>' +
+    '<path d="M34 100 Q40 104 46 101" fill="none" stroke="#566573" stroke-width="2"/>' +
+    '<circle cx="56" cy="82" r="3.5" fill="#2c3e50"/>' +
+    '<path d="M42 104 Q44 118 50 120 Q52 108 50 104 Z" fill="#d5dbdb" stroke="#aab7b8" stroke-width="2.5"/>' +
+    '</g></svg>'
+};
+
+// slovo, kategória (start/mid/end)
+const WORDS = [
+  ["AUTO", "start"], ["AUTOBUS", "start"], ["ANJEL", "start"], ["ANTÉNA", "start"], ["AGENT", "start"],
+  ["AKVÁRIUM", "start"], ["ALIGÁTOR", "start"], ["AVOKÁDO", "start"], ["ALBUM", "start"], ["AKORDEÓN", "start"],
+  ["VLAK", "mid"], ["HAD", "mid"], ["RAK", "mid"], ["MAK", "mid"], ["DAR", "mid"],
+  ["HRAD", "mid"], ["MRAK", "mid"], ["PARK", "mid"], ["TANK", "mid"], ["TRAKTOR", "mid"],
+  ["SOVA", "end"], ["RYBA", "end"], ["KNIHA", "end"], ["NOHA", "end"], ["RUKA", "end"],
+  ["MUCHA", "end"], ["GUMA", "end"], ["LUPA", "end"], ["ZIMA", "end"], ["KOZA", "end"]
+];
+
+const CAT_OF = { start: "btn-start", mid: "btn-mid", end: "btn-end" };
+
+function highlightIndexes(word, cat) {
+  if (cat === "start") return [0];
+  if (cat === "end") return [word.length - 1];
+  return [word.indexOf("A")];
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function makeSeries(forbiddenFirst) {
+  let s;
+  do {
+    s = shuffle(WORDS);
+  } while (s.length > 1 && s[0][0] === forbiddenFirst);
+  return s;
+}
+
+const elSeries = document.getElementById("series");
+const elCounter = document.getElementById("counter");
+const elArt = document.getElementById("art");
+const elSmiley = document.getElementById("smiley");
+const elWord = document.getElementById("word");
+const buttons = {
+  start: document.getElementById("btn-start"),
+  mid: document.getElementById("btn-mid"),
+  end: document.getElementById("btn-end")
+};
+
+let series = makeSeries(null);
+let pos = 0;          // poradie v sérii (0-based)
+let serieNo = 1;
+let locked = false;
+let timerId = null;
+
+function setButtonsEnabled(on) {
+  for (const k in buttons) buttons[k].disabled = !on;
+}
+
+function renderWord(entry, cls) {
+  const word = entry[0];
+  const hl = highlightIndexes(word, entry[1]);
+  let html = "";
+  for (let i = 0; i < word.length; i++) {
+    if (hl.indexOf(i) >= 0) {
+      html += '<span class="' + cls + '">' + word[i] + "</span>";
+    } else {
+      html += word[i];
+    }
+  }
+  elWord.innerHTML = html;
+}
+
+function showTask() {
+  const entry = series[pos];
+  elArt.innerHTML = ART[entry[0]];
+  elWord.innerHTML = "";
+  elSmiley.style.display = "none";
+  elSeries.textContent = "Séria " + serieNo;
+  elCounter.textContent = (pos + 1) + " / " + series.length;
+  locked = false;
+  setButtonsEnabled(true);
+}
+
+function answer(cat) {
+  if (locked) return;
+  const entry = series[pos];
+  if (cat === entry[1]) {
+    locked = true;
+    setButtonsEnabled(false);
+    renderWord(entry, "hl-ok");
+    elSmiley.innerHTML = SMILE_HAPPY;
+    elSmiley.style.display = "block";
+    timerId = setTimeout(nextTask, 4000);
+  } else {
+    renderWord(entry, "hl-wrong");
+    elSmiley.innerHTML = SMILE_SAD;
+    elSmiley.style.display = "block";
+  }
+}
+
+function nextTask() {
+  pos++;
+  if (pos >= series.length) {
+    const lastWord = series[series.length - 1][0];
+    serieNo++;
+    series = makeSeries(lastWord);
+    pos = 0;
+  }
+  showTask();
+}
+
+buttons.start.addEventListener("click", function () { answer("start"); });
+buttons.mid.addEventListener("click", function () { answer("mid"); });
+buttons.end.addEventListener("click", function () { answer("end"); });
+
+showTask();
+</script>
+</body>
+</html>
